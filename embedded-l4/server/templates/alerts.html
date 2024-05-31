@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Alerts</title>
+</head>
+<body>
+    {% for alert in alerts %}
+        <p>{{ alert }}</p>
+    {% endfor %}
+    {% for image_url in image_urls %}
+        <img src="{{ image_url }}" alt="Alert image">
+    {% endfor %}
+</body>
+</html>

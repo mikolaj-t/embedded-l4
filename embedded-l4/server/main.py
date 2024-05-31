@@ -3,10 +3,11 @@ from werkzeug.utils import secure_filename
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
 import os, datetime
 
-app = Flask(__name__)
+UPLOAD_FOLDER = '/images'
 
-# Assuming the 3rd partition is mounted at /mnt/p3
-UPLOAD_FOLDER = '/mnt/p3'
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'secret-key'
@@ -53,18 +54,33 @@ def logout():
 def index():
     return '<a href="/logout">Logout</a></br></br>' + '<br>'.join(['<p>{}</p>'.format(a) for a in alerts])
 
-app.route('/alerts', methods=['GET'])
+@app.route('/alerts', methods=['GET'])
 @login_required
 def read_alert():
-    return jsonify({'alerts': alerts}), 200
+    image_files = os.listdir(app.config['UPLOAD_FOLDER'])
+    image_urls = [request.url_root + 'uploads/' + file for file in image_files]
+    return render_template('alerts.html', alerts=alerts, image_urls=image_urls)
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() is "png"
 
 @app.route('/alerts', methods=['POST'])
 def post_alert():
-    alert = request.get_json()
-    alert['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    alerts.append(alert)
-    return jsonify({'message': 'Alert received'}), 200
-
+    # check if the post request has the file part
+    if 'file' not in request.files:
+        return jsonify({'message': 'No file part'}), 400
+    file = request.files['file']
+    # if user does not select file, browser also
+    # submit an empty part without filename
+    if file.filename == '':
+        return jsonify({'message': 'No selected file'}), 400
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return jsonify({'message': 'File uploaded successfully'}), 200
+    else:
+        return jsonify({'message': 'Allowed file type is png'}), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)

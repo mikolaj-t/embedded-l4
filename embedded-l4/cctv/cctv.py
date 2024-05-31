@@ -1,15 +1,16 @@
 import cv2
 import time
+import requests
 
-# Load the cascade
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
-# To capture video from webcam. 
+# Capture video from webcam. 
 cap = cv2.VideoCapture(0)
 
 face_detected = False
 last_detection_time = time.time()
 DETECTION_DELAY = 5  # Delay (in seconds) between subsequent detections
+ALERT_ENDPOINT = 'http://localhost:8000/alerts'  
 
 while True:
     # Read the frame
@@ -27,15 +28,13 @@ while True:
         if not face_detected or time.time() - last_detection_time > DETECTION_DELAY:
             face_detected = True
             last_detection_time = time.time()
-            cv2.imwrite(f'face_detected_{time.time()}.png', img)
+            filename = f'face_detected_{time.time()}.png'
+            cv2.imwrite(filename, img)
 
-    # Display
-    # cv2.imshow('img', img)
+            # Send the image to the /alert endpoint
+            with open(filename, 'rb') as f:
+                response = requests.post(ALERT_ENDPOINT, files={'file': f})
 
-    # # Stop if escape key is pressed
-    # k = cv2.waitKey(30) & 0xff
-    # if k==27:
-    #     break
-        
-# Release the VideoCapture object
+
+    
 cap.release()
